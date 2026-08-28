@@ -21,6 +21,7 @@ import Cart from './pages/Cart';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import AdminDashboard from './pages/AdminDashboard';
+import MyOrders from './pages/MyOrders';
 
 // Import CSS
 import './App.css';
@@ -43,6 +44,7 @@ function App() {
                 <Route path="/cart" element={<Cart />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
+                <Route path="/orders" element={<MyOrders />} />
                 
                 {/* Tuyến đường quản lý (Admin Dashboard) */}
                 <Route path="/admin" element={<AdminDashboard />} />

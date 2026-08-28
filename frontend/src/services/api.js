@@ -38,25 +38,26 @@ export const apiCall = async (endpoint, method = 'GET', body = null) => {
   
   // CODE THỬ NGHIỆM BAN ĐẦU (HÃY SỬA LẠI THEO CÁC BƯỚC TRÊN):
   console.log(`Đang gọi API: ${method} ${API_BASE_URL}${endpoint}`);
-  try{
-    const options={
-      method:method,
-      headers:{
-        'content-type':'application/json',...getAuthHeaders()
-
+  try {
+    const options = {
+      method: method,
+      headers: {
+        'content-type': 'application/json',
+        ...getAuthHeaders()
       }
+    };
+    if (body) {
+      options.body = JSON.stringify(body);
     }
-    if(body){
-      options.body=JSON.stringify(body);
-    }
-    const response=await fetch(`${API_BASE_URL}${endpoint}`,options);
-    const data =await response.json();
-    if(!response.ok){
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+    const data = await response.json();
+    if (!response.ok) {
       throw new Error(data.message || 'Đã xảy ra lỗi kết nối mạng!');
     }
     return data;
-  }catch(error){
-    console.error('')
+  } catch (error) {
+    console.error('Lỗi khi gọi API:', error.message);
+    throw error;
   }
   // Trả về dữ liệu cứng tạm thời cho giao diện Trang chủ hoạt động khi bạn chưa viết code fetch:
   if (endpoint.startsWith('/products')) {

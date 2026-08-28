@@ -39,6 +39,13 @@ const Navbar = () => {
               Giỏ Hàng
             </NavLink>
           </li>
+          {user && (
+            <li>
+              <NavLink to="/orders" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>
+                Đơn Hàng
+              </NavLink>
+            </li>
+          )}
           {/* Chỉ hiển thị link Admin Dashboard nếu người dùng đăng nhập có vai trò admin */}
           {user && user.role === 'admin' && (
             <li>

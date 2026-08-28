@@ -29,11 +29,13 @@ app.use(express.urlencoded({ extended: true }));
 const authRoutes = require('./routes/authRoutes');
 const productRoutes = require('./routes/productRoutes');
 const orderRoutes = require('./routes/orderRoutes');
+const userRoutes = require('./routes/userRoutes');
 
 // Gắn các tuyến đường vào các tiền tố URL tương ứng
 app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/users', userRoutes);
 
 // Tuyến đường mặc định kiểm tra máy chủ hoạt động (GET /)
 app.get('/', (req, res) => {

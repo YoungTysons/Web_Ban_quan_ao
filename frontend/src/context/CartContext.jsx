@@ -87,36 +87,31 @@ export const CartProvider = ({ children }) => {
 
   // Nhiệm vụ 5: Cập nhật số lượng của một mặt hàng trong giỏ
   const updateQuantity = (productId, size, quantity) => {
-    // Gợi ý:
     // Bước 1: Nếu số lượng <= 0, hãy gọi hàm xóa removeFromCart(productId, size)
+    if (quantity <= 0) {
+      removeFromCart(productId, size);
+      return;
+    }
     // Bước 2: Duyệt qua mảng bằng map(), tìm phần tử trùng ID và SIZE để gán giá trị `quantity` mới.
-      if(quantity<=0){
-        removeFromCart(productId,size);
-      }
-      const updateQuantity=cartItems.map(item=>item.productId===productID&&item.size===size
-      ?{...item,quantity}
-      :item
-      );
-    // HÃY VIẾT CODE CỦA BẠN TẠI ĐÂY:
+    const updatedCart = cartItems.map(item =>
+      item.productId === productId && item.size === size
+        ? { ...item, quantity }
+        : item
+    );
+    setCartItems(updatedCart);
     console.log('updateQuantity() được gọi với ID:', productId, 'Size:', size, 'SL Mới:', quantity);
   };
 
   // Nhiệm vụ 6: Xóa sạch giỏ hàng (Sau khi thanh toán thành công)
   const clearCart = () => {
-    // Gợi ý: Đặt lại mảng setCartItems([]) rỗng
-    // HÃY VIẾT CODE CỦA BẠN TẠI ĐÂY:
-
     setCartItems([]);
   };
 
   // Nhiệm vụ 7: Tính toán tổng số lượng sản phẩm trong giỏ hàng (cartCount)
-  // Gợi ý: Dùng hàm reduce() cộng dồn các trường `quantity` trong mảng `cartItems`. Tạm thời để mặc định là 0.
-  const cartCount = cartItems.reduce((cartTotal,item)=>total+item.quantity,0);
+  const cartCount = cartItems.reduce((cartTotal, item) => cartTotal + item.quantity, 0);
 
   // Nhiệm vụ 8: Tính toán tổng tiền của giỏ hàng chưa gồm ship (cartTotal)
-
-  // Gợi ý: Dùng hàm reduce() cộng dồn (price * quantity) của từng sản phẩm trong mảng `cartItems`. Tạm thời để mặc định là 0.
-  const cartTotal = cartItems.reduce((total,item)=>total+item.price*item.quantity,0);
+  const cartTotal = cartItems.reduce((total, item) => total + item.price * item.quantity, 0);
 
   return (
     <CartContext.Provider

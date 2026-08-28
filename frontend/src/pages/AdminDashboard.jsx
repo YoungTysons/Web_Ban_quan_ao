@@ -6,7 +6,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { apiCall } from '../services/api';
-import { Plus, Edit2, Trash2, Shirt, ShoppingCart, DollarSign, Package, X } from 'lucide-react';
+import { Plus, Edit2, Trash2, Shirt, ShoppingCart, DollarSign, Package, X, Users } from 'lucide-react';
 
 const AdminDashboard = () => {
   const { user } = useContext(AuthContext);
@@ -22,6 +22,10 @@ const AdminDashboard = () => {
   // Trạng thái Đơn hàng
   const [orders, setOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(true);
+
+  // Trạng thái Nhân sự
+  const [users, setUsers] = useState([]);
+  const [usersLoading, setUsersLoading] = useState(true);
 
   // Trạng thái Modal (Thêm/Sửa sản phẩm)
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -70,10 +74,24 @@ const AdminDashboard = () => {
     }
   };
 
+  // Load danh sách người dùng/nhân sự
+  const fetchUsers = async () => {
+    setUsersLoading(true);
+    try {
+      const data = await apiCall('/users');
+      setUsers(data);
+    } catch (err) {
+      console.error('Lỗi tải người dùng admin:', err);
+    } finally {
+      setUsersLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (user && user.role === 'admin') {
       fetchProducts();
       fetchOrders();
+      fetchUsers();
     }
   }, [user]);
 
@@ -151,6 +169,56 @@ const AdminDashboard = () => {
     }
   };
 
+  // Đổi vai trò người dùng từ dropdown select
+  const handleRoleChange = async (targetUser, newRole) => {
+    if (targetUser.role === newRole) return;
+    const confirmMsg = `Bạn có chắc chắn muốn chuyển vai trò của "${targetUser.name}" thành ${newRole === 'admin' ? 'Quản trị viên' : 'Khách hàng'}?`;
+    if (window.confirm(confirmMsg)) {
+      try {
+        await apiCall(`/users/${targetUser.id}/role`, 'PUT', { role: newRole });
+        alert('Cập nhật vai trò thành công!');
+        fetchUsers();
+      } catch (err) {
+        alert(err.message || 'Lỗi khi thay đổi vai trò');
+        fetchUsers();
+      }
+    } else {
+      fetchUsers();
+    }
+  };
+
+  // Xóa tài khoản người dùng
+  const handleDeleteUser = async (targetUser) => {
+    if (!targetUser || !targetUser.id) {
+      alert('Không xác định được ID người dùng cần xóa!');
+      return;
+    }
+
+    // Không cho phép tự xóa chính mình
+    if (user && parseInt(targetUser.id) === parseInt(user.id)) {
+      alert('Bạn không thể tự xóa tài khoản quản trị của chính mình!');
+      return;
+    }
+
+    // Không cho phép xóa người dùng đã có đơn hàng
+    if (targetUser.orders_count > 0) {
+      alert(`Không thể xóa tài khoản "${targetUser.name}" vì họ đã có ${targetUser.orders_count} đơn hàng trên hệ thống (để bảo toàn lịch sử giao dịch).`);
+      return;
+    }
+
+    const confirmMsg = `Bạn có chắc chắn muốn xóa tài khoản "${targetUser.name}"?`;
+    if (window.confirm(confirmMsg)) {
+      try {
+        const res = await apiCall(`/users/${targetUser.id}`, 'DELETE');
+        alert(res.message || 'Xóa tài khoản thành công!');
+        fetchUsers();
+      } catch (err) {
+        console.error('Lỗi khi xóa người dùng:', err);
+        alert(err.message || 'Lỗi khi xóa tài khoản');
+      }
+    }
+  };
+
   // Định dạng hiển thị tiền VNĐ
   const formatPrice = (price) => {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
@@ -169,7 +237,7 @@ const AdminDashboard = () => {
   const pendingOrders = orders.filter(o => o.status === 'pending').length;
 
   return (
-    <div className="container fade-in" style={{ marginTop: '2rem' }}>
+    <div className="container fade-in" style={{ marginTop: '6rem' }}>
       <h2 style={{ fontSize: '1.8rem', fontWeight: 700, marginBottom: '0.25rem' }}>Trang Quản Trị Hệ Thống</h2>
       <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>Chào mừng quản trị viên: {user.name}</p>
 
@@ -192,6 +260,14 @@ const AdminDashboard = () => {
                 onClick={() => setActiveTab('orders')}
               >
                 <ShoppingCart size={18} /> Quản Lý Đơn Hàng ({pendingOrders})
+              </button>
+            </li>
+            <li>
+              <button 
+                className={`admin-sidebar-btn ${activeTab === 'users' ? 'active' : ''}`}
+                onClick={() => setActiveTab('users')}
+              >
+                <Users size={18} /> Quản Lý Nhân Sự
               </button>
             </li>
           </ul>
@@ -235,15 +311,15 @@ const AdminDashboard = () => {
                 <div>Đang tải sản phẩm...</div>
               ) : (
                 <div className="admin-data-table-wrapper">
-                  <table className="admin-table">
+                  <table className="admin-table" style={{ minWidth: '900px' }}>
                     <thead>
                       <tr>
-                        <th>Ảnh</th>
+                        <th style={{ width: '80px', whiteSpace: 'nowrap' }}>Ảnh</th>
                         <th>Tên sản phẩm</th>
-                        <th>Phân loại</th>
-                        <th>Giá bán</th>
-                        <th>Tồn kho</th>
-                        <th>Hành động</th>
+                        <th style={{ whiteSpace: 'nowrap' }}>Phân loại</th>
+                        <th style={{ whiteSpace: 'nowrap' }}>Giá bán</th>
+                        <th style={{ whiteSpace: 'nowrap' }}>Tồn kho</th>
+                        <th style={{ whiteSpace: 'nowrap' }}>Hành động</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -251,19 +327,19 @@ const AdminDashboard = () => {
                         <tr key={p.id}>
                           <td><img src={p.imageUrl} alt={p.name} className="table-product-thumb" /></td>
                           <td><strong style={{ display: 'block' }}>{p.name}</strong><span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Sizes: {Array.isArray(p.sizes) ? p.sizes.join(',') : p.sizes}</span></td>
-                          <td>
+                          <td style={{ whiteSpace: 'nowrap' }}>
                             {p.categoryId === 1 && 'Áo Thun'}
                             {p.categoryId === 2 && 'Quần Jean'}
                             {p.categoryId === 3 && 'Áo Khoác & Hoodie'}
                             {p.categoryId === 4 && 'Sơ Mi'}
                           </td>
-                          <td><strong style={{ color: 'var(--primary)' }}>{formatPrice(p.price)}</strong></td>
-                          <td>
+                          <td style={{ whiteSpace: 'nowrap' }}><strong style={{ color: 'var(--primary)' }}>{formatPrice(p.price)}</strong></td>
+                          <td style={{ whiteSpace: 'nowrap' }}>
                             <span style={{ fontWeight: 600, color: p.stockQuantity < 10 ? 'var(--danger)' : 'inherit' }}>
                               {p.stockQuantity} món
                             </span>
                           </td>
-                          <td>
+                          <td style={{ whiteSpace: 'nowrap' }}>
                             <div className="table-actions">
                               <button onClick={() => openEditModal(p)} className="table-action-btn edit" title="Sửa thông tin"><Edit2 size={14} /></button>
                               <button onClick={() => handleDeleteProduct(p.id)} className="table-action-btn delete" title="Xóa"><Trash2 size={14} /></button>
@@ -312,22 +388,22 @@ const AdminDashboard = () => {
                 <div>Đang tải đơn hàng...</div>
               ) : (
                 <div className="admin-data-table-wrapper">
-                  <table className="admin-table">
+                  <table className="admin-table" style={{ minWidth: '1050px' }}>
                     <thead>
                       <tr>
-                        <th>Mã đơn</th>
-                        <th>Ngày đặt</th>
+                        <th style={{ whiteSpace: 'nowrap' }}>Mã đơn</th>
+                        <th style={{ whiteSpace: 'nowrap' }}>Ngày đặt</th>
                         <th>Thông tin giao hàng</th>
                         <th>Sản phẩm đặt mua</th>
-                        <th>Tổng tiền</th>
-                        <th>Trạng thái đơn</th>
+                        <th style={{ whiteSpace: 'nowrap' }}>Tổng tiền</th>
+                        <th style={{ whiteSpace: 'nowrap' }}>Trạng thái đơn</th>
                       </tr>
                     </thead>
                     <tbody>
                       {orders.map(order => (
                         <tr key={order.id}>
-                          <td><strong>#{order.id}</strong></td>
-                          <td style={{ fontSize: '0.85rem' }}>{new Date(order.orderDate).toLocaleDateString('vi-VN')}</td>
+                          <td style={{ whiteSpace: 'nowrap' }}><strong>#{order.id}</strong></td>
+                          <td style={{ fontSize: '0.85rem', whiteSpace: 'nowrap' }}>{new Date(order.orderDate).toLocaleDateString('vi-VN')}</td>
                           <td>
                             <div style={{ fontSize: '0.85rem' }}>
                               <p>👤 <strong>{order.name || 'Khách Hàng'}</strong></p>
@@ -338,20 +414,20 @@ const AdminDashboard = () => {
                           <td>
                             <div style={{ fontSize: '0.8rem', display: 'flex', flexDirection: 'column', gap: '3px' }}>
                               {order.items && order.items.map((item, idx) => (
-                                <div key={idx}>
+                                <div key={idx} style={{ whiteSpace: 'nowrap' }}>
                                   👕 {item.name} (Size: {item.size}) x <strong>{item.quantity}</strong>
                                 </div>
                               ))}
                             </div>
                           </td>
-                          <td><strong style={{ color: 'var(--accent)' }}>{formatPrice(order.totalAmount)}</strong></td>
-                          <td>
+                          <td style={{ whiteSpace: 'nowrap' }}><strong style={{ color: 'var(--accent)' }}>{formatPrice(order.totalAmount)}</strong></td>
+                          <td style={{ whiteSpace: 'nowrap' }}>
                             {/* Dropdown thay đổi trạng thái đơn hàng */}
                             <select 
                               value={order.status} 
                               onChange={(e) => handleStatusChange(order.id, e.target.value)}
                               className={`badge badge-${order.status}`}
-                              style={{ border: '1px solid #cbd5e1', cursor: 'pointer', fontFamily: 'inherit', padding: '0.25rem 0.5rem' }}
+                              style={{ border: '1px solid #cbd5e1', cursor: 'pointer', fontFamily: 'inherit', padding: '0.25rem 0.5rem', whiteSpace: 'nowrap' }}
                             >
                               <option value="pending">Chờ Duyệt (Pending)</option>
                               <option value="processing">Đang Xử Lý (Processing)</option>
@@ -359,6 +435,114 @@ const AdminDashboard = () => {
                               <option value="delivered">Đã Giao (Delivered)</option>
                               <option value="cancelled">Đã Hủy (Cancelled)</option>
                             </select>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 3: QUẢN LÝ NHÂN SỰ */}
+          {activeTab === 'users' && (
+            <div>
+              {/* Grid Thống Kê Nhân Sự */}
+              <div className="admin-stats-grid">
+                <div className="stat-card">
+                  <div className="stat-icon-wrapper"><Users style={{ color: 'var(--primary)' }} /></div>
+                  <div>
+                    <div className="stat-num">{users.length}</div>
+                    <div className="stat-label">Tổng tài khoản</div>
+                  </div>
+                </div>
+                <div className="stat-card gold">
+                  <div className="stat-icon-wrapper"><Users style={{ color: 'var(--accent)' }} /></div>
+                  <div>
+                    <div className="stat-num">{users.filter(u => u.role === 'admin').length}</div>
+                    <div className="stat-label">Quản trị viên</div>
+                  </div>
+                </div>
+              </div>
+
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '1.5rem' }}>Danh Sách Nhân Sự & Khách Hàng</h3>
+
+              {usersLoading ? (
+                <div>Đang tải danh sách tài khoản...</div>
+              ) : (
+                <div className="admin-data-table-wrapper">
+                  <table className="admin-table" style={{ minWidth: '1150px' }}>
+                    <thead>
+                      <tr>
+                        <th style={{ width: '60px', whiteSpace: 'nowrap' }}>ID</th>
+                        <th style={{ whiteSpace: 'nowrap' }}>Họ tên</th>
+                        <th style={{ whiteSpace: 'nowrap' }}>Email</th>
+                        <th style={{ whiteSpace: 'nowrap' }}>Số điện thoại</th>
+                        <th>Địa chỉ</th>
+                        <th style={{ whiteSpace: 'nowrap' }}>Đơn hàng đã đặt</th>
+                        <th style={{ whiteSpace: 'nowrap' }}>Vai trò</th>
+                        <th style={{ whiteSpace: 'nowrap' }}>Hành động</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {users.map(u => (
+                        <tr key={u.id}>
+                          <td style={{ whiteSpace: 'nowrap' }}><strong>#{u.id}</strong></td>
+                          <td style={{ whiteSpace: 'nowrap' }}><strong>{u.name}</strong></td>
+                          <td style={{ whiteSpace: 'nowrap' }}>{u.email}</td>
+                          <td style={{ whiteSpace: 'nowrap' }}>{u.phone || '---'}</td>
+                          <td style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{u.address || '---'}</td>
+                          <td style={{ whiteSpace: 'nowrap' }}>
+                            <span 
+                              className={`badge ${u.orders_count > 0 ? 'badge-processing' : ''}`}
+                              style={{ 
+                                backgroundColor: u.orders_count > 0 ? '#e0f2fe' : '#f1f5f9', 
+                                color: u.orders_count > 0 ? '#0369a1' : '#64748b',
+                                border: '1px solid ' + (u.orders_count > 0 ? '#bae6fd' : '#e2e8f0'),
+                                borderRadius: '20px',
+                                padding: '0.25rem 0.75rem',
+                                fontSize: '0.75rem',
+                                whiteSpace: 'nowrap',
+                                display: 'inline-block'
+                              }}
+                            >
+                              {u.orders_count || 0} đơn hàng
+                            </span>
+                          </td>
+                          <td style={{ whiteSpace: 'nowrap' }}>
+                            <select 
+                              value={u.role} 
+                              onChange={(e) => handleRoleChange(u, e.target.value)}
+                              className={`badge ${u.role === 'admin' ? 'badge-processing' : 'badge-pending'}`}
+                              style={{ border: '1px solid #cbd5e1', cursor: 'pointer', fontFamily: 'inherit', padding: '0.25rem 0.75rem', borderRadius: '20px', whiteSpace: 'nowrap' }}
+                            >
+                              <option value="customer">Khách hàng</option>
+                              <option value="admin">Quản trị viên</option>
+                            </select>
+                          </td>
+                          <td>
+                            <div className="table-actions">
+                              {u.orders_count > 0 || (user && parseInt(u.id) === parseInt(user.id)) ? (
+                                <button 
+                                  onClick={() => handleDeleteUser(u)} 
+                                  className="table-action-btn delete" 
+                                  title={user && parseInt(u.id) === parseInt(user.id) ? "Tài khoản của bạn (Không thể xóa)" : `Đã mua ${u.orders_count} đơn hàng (Không thể xóa)`}
+                                  style={{ cursor: 'not-allowed', opacity: 0.5 }}
+                                >
+                                  <Trash2 size={14} style={{ pointerEvents: 'none' }} />
+                                </button>
+                              ) : (
+                                <button 
+                                  onClick={() => handleDeleteUser(u)} 
+                                  className="table-action-btn delete" 
+                                  title="Xóa tài khoản này"
+                                  style={{ cursor: 'pointer' }}
+                                >
+                                  <Trash2 size={14} style={{ pointerEvents: 'none' }} />
+                                </button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       ))}

@@ -3,14 +3,14 @@
 // ĐÂY LÀ KHUNG BÀI TẬP DÀNH CHO BẠN TỰ CODE LOGIC PHÂN QUYỀN ADMIN.
 
 const adminOnly = (req, res, next) => {
-  // === BÀI TẬP THỰC HÀNH CỦA BẠN ===
-  // Bước 1: Kiểm tra xem `req.user` có tồn tại hay không (phải chạy middleware protect trước)
-  // Bước 2: Kiểm tra trường `req.user.role` có phải là 'admin' hay không.
-  // Bước 3: Nếu đúng là admin, gọi hàm `next()` để đi tiếp tới controller.
-  // Bước 4: Nếu không phải admin, trả về trạng thái 403 (Forbidden) kèm thông tin từ chối truy cập.
-
-  // CODE MẪU BỎ QUA KIỂM TRA TẠM THỜI (HÃY SỬA LẠI THEO CÁC BƯỚC TRÊN):
-  next(); 
+  // Bước 1 & 2: Kiểm tra xem req.user có tồn tại và role có phải 'admin' không
+  if (req.user && req.user.role === 'admin') {
+    // Bước 3: Nếu đúng là admin, đi tiếp
+    next();
+  } else {
+    // Bước 4: Trả về trạng thái 403 khi không phải admin
+    res.status(403).json({ message: 'Truy cập bị từ chối! Chức năng này chỉ dành cho quản trị viên.' });
+  }
 };
 
 module.exports = { adminOnly };

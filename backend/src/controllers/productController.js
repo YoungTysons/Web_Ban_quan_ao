@@ -97,15 +97,25 @@ const createProduct = async (req, res) => {
     const { categoryId, name, price, description, sizes, stockQuantity, imageUrl } = req.body;
     const pool = await poolPromise;
     if (!pool) return res.status(500).json({ message: 'Lỗi kết nối cơ sở dữ liệu!' });
-
-    // === BÀI TẬP CỦA BẠN (Tạo mới sản phẩm) ===
-    // Bước 1: Viết câu lệnh INSERT INTO products (category_id, name, price, description, sizes, stock_quantity, image_url)
-    //         Kết hợp với mệnh đề 'OUTPUT Inserted.*' để lấy đối tượng vừa insert thành công
-    //         Lưu ý: tham số `sizes` nếu client gửi lên dạng Mảng thì hãy chuyển thành chuỗi bằng `.join(',')` trước khi gán .input()
-    // Bước 2: Dùng .input() để gán các tham số tương ứng một cách an toàn
-    // Bước 3: Thực thi truy vấn, lấy bản ghi đầu tiên, gọi formatProduct(...) và trả về res.status(201).json(...)
-
-    res.status(201).json({ message: 'Chưa triển khai...' }); // TODO: Thay thế
+    const sizesString = Array.isArray(sizes) ? sizes.join(',') : (sizes || 'S,M,L,XL');
+    const result = await pool.request()
+      .input('category_id', sql.Int, parseInt(categoryId))
+      .input('name', sql.NVarChar, name)
+      .input('price', sql.Decimal(10, 2), parseFloat(price))
+      .input('description', sql.NVarChar, description || '')
+      .input('sizes', sql.NVarChar, sizesString)
+      .input('stock_quantity', sql.Int, parseInt(stockQuantity))
+      .input('image_url', sql.NVarChar, imageUrl || '')
+      .query(`
+        INSERT INTO products (category_id, name, price, description, sizes, stock_quantity, image_url)
+        OUTPUT Inserted.*
+        VALUES (@category_id, @name, @price, @description, @sizes, @stock_quantity, @image_url)
+      `);
+    const newProduct = result.recordset[0];
+    if (!newProduct) {
+      return res.status(400).json({ message: 'Không thể tạo sản phẩm!' });
+    }
+    res.status(201).json(formatProduct(newProduct));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -119,20 +129,35 @@ const updateProduct = async (req, res) => {
     const { categoryId, name, price, description, sizes, stockQuantity, imageUrl } = req.body;
     const pool = await poolPromise;
     if (!pool) return res.status(500).json({ message: 'Lỗi kết nối cơ sở dữ liệu!' });
+    const sizesString = Array.isArray(sizes) ? sizes.join(',') : (sizes || 'S,M,L,XL');
+    const result = await pool.request()
+      .input('id', sql.Int, parseInt(id))
+      .input('category_id', sql.Int, parseInt(categoryId))
+      .input('name', sql.NVarChar, name)
+      .input('price', sql.Decimal(10, 2), parseFloat(price))
+      .input('description', sql.NVarChar, description || '')
+      .input('sizes', sql.NVarChar, sizesString)
+      .input('stock_quantity', sql.Int, parseInt(stockQuantity))
+      .input('image_url', sql.NVarChar, imageUrl || '')
+      .query(`
+        UPDATE products 
+        SET category_id = @category_id, name = @name, price = @price, description = @description, sizes = @sizes, stock_quantity = @stock_quantity, image_url = @image_url 
+        OUTPUT Inserted.*
+        WHERE id = @id
+      `);
+    if (result.recordset.length === 0) {
+      return res.status(404).json({ message: 'Không tìm thấy sản phẩm cần cập nhật!' });
+    }
 
-    // === BÀI TẬP CỦA BẠN (Cập nhật) ===
-    // Bước 1: Viết câu lệnh UPDATE products SET ... OUTPUT Inserted.* WHERE id = @id
-    //         (Nhớ chuyển đổi sizes thành chuỗi bằng .join(',') nếu sizes là Mảng)
-    // Bước 2: Dùng .input() truyền tất cả các trường mới và 'id' của sản phẩm cần sửa
-    // Bước 3: Thực thi truy vấn, nếu result.recordset.length === 0 tức là sản phẩm không tồn tại -> Trả về lỗi 404
-    // Bước 4: Nếu sửa thành công, gọi formatProduct(result.recordset[0]) và trả về res.json(...)
-
-    res.json({ message: 'Chưa triển khai...' }); // TODO: Thay thế
+    const updatedProduct = formatProduct(result.recordset[0]);
+    res.json(updatedProduct);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
+// 5. XÓA SẢN PHẨM
+// Route: DELETE /api/products/:id
 // 5. XÓA SẢN PHẨM
 // Route: DELETE /api/products/:id
 const deleteProduct = async (req, res) => {
@@ -141,13 +166,18 @@ const deleteProduct = async (req, res) => {
     const pool = await poolPromise;
     if (!pool) return res.status(500).json({ message: 'Lỗi kết nối cơ sở dữ liệu!' });
 
-    // === BÀI TẬP CỦA BẠN (Xóa sản phẩm) ===
-    // Bước 1: Viết câu lệnh DELETE FROM products OUTPUT Deleted.id WHERE id = @id
-    // Bước 2: Dùng .input() để gán tham số 'id'
-    // Bước 3: Thực thi truy vấn, nếu không tìm thấy bản ghi nào bị xóa (length === 0) -> Trả về lỗi 404
-    // Bước 4: Nếu xóa thành công, trả về res.json({ message: 'Xóa sản phẩm thành công!' })
+    // 1. Thực thi câu lệnh DELETE với mệnh đề OUTPUT Deleted.id
+    const result = await pool.request()
+      .input('id', sql.Int, parseInt(id))
+      .query('DELETE FROM products OUTPUT Deleted.id WHERE id = @id');
 
-    res.json({ message: 'Chưa triển khai...' }); // TODO: Thay thế
+    // 2. Nếu không có dòng nào bị xóa (ID không tồn tại trong DB)
+    if (result.recordset.length === 0) {
+      return res.status(404).json({ message: 'Không tìm thấy sản phẩm này để xóa!' });
+    }
+
+    // 3. Xóa thành công
+    res.json({ message: 'Xóa sản phẩm thành công!', id: parseInt(id) });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
