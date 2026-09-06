@@ -1,9 +1,5 @@
-// file: src/controllers/productController.js
-// BÀI TẬP THỰC HÀNH: QUẢN LÝ SẢN PHẨM VỚI SQL SERVER (CRUD)
 const { sql, poolPromise } = require('../config/db');
 
-// Helper định dạng dữ liệu sản phẩm từ SQL Server (snake_case, sizes dạng chuỗi)
-// thành dữ liệu Frontend React yêu cầu (camelCase, sizes dạng mảng)
 const formatProduct = (p) => {
   if (!p) return null;
   return {
@@ -16,27 +12,9 @@ const formatProduct = (p) => {
     stockQuantity: p.stock_quantity,
     imageUrl: p.image_url,
     createdAt: p.created_at
-  }
-  // === BÀI TẬP CỦA BẠN (Helper format) ===
-  // Hãy trả về đối tượng sản phẩm với các thuộc tính đã được chuẩn hóa:
-  // - id: p.id
-  // - categoryId: p.category_id
-  // - name: p.name
-  // - price: Chuyển p.price sang kiểu số thực bằng Number(p.price)
-  // - description: p.description
-  // - sizes: Nếu p.sizes là chuỗi, tách thành mảng bằng dấu phẩy: p.sizes.split(',')
-  //          Nếu p.sizes không có giá trị hoặc trống, trả về mảng rỗng []
-  // - stockQuantity: p.stock_quantity
-  // - imageUrl: p.image_url
-  // - createdAt: p.created_at
-
-  return {
-    // TODO: Viết các thuộc tính ở đây...
   };
 };
 
-// 1. LẤY DANH SÁCH SẢN PHẨM (Có bộ lọc tìm kiếm và danh mục)
-// Route: GET /api/products?search=...&categoryId=...
 const getProducts = async (req, res) => {
   try {
     const { search, categoryId } = req.query;
@@ -57,8 +35,6 @@ const getProducts = async (req, res) => {
     }
 
     const result = await request.query(queryStr);
-
-    // Định dạng danh sách sản phẩm trước khi gửi về cho React
     const formattedProducts = result.recordset.map(formatProduct);
     res.json(formattedProducts);
   } catch (error) {
@@ -66,8 +42,6 @@ const getProducts = async (req, res) => {
   }
 };
 
-// 2. LẤY CHI TIẾT 1 SẢN PHẨM THEO ID
-// Route: GET /api/products/:id
 const getProductById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -89,9 +63,6 @@ const getProductById = async (req, res) => {
   }
 };
 
-
-// 3. TẠO MỚI SẢN PHẨM (Chỉ dành cho Admin)
-// Route: POST /api/products
 const createProduct = async (req, res) => {
   try {
     const { categoryId, name, price, description, sizes, stockQuantity, imageUrl } = req.body;
@@ -121,8 +92,6 @@ const createProduct = async (req, res) => {
   }
 };
 
-// 4. CẬP NHẬT SẢN PHẨM
-// Route: PUT /api/products/:id
 const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
@@ -156,27 +125,20 @@ const updateProduct = async (req, res) => {
   }
 };
 
-// 5. XÓA SẢN PHẨM
-// Route: DELETE /api/products/:id
-// 5. XÓA SẢN PHẨM
-// Route: DELETE /api/products/:id
 const deleteProduct = async (req, res) => {
   try {
     const { id } = req.params;
     const pool = await poolPromise;
     if (!pool) return res.status(500).json({ message: 'Lỗi kết nối cơ sở dữ liệu!' });
 
-    // 1. Thực thi câu lệnh DELETE với mệnh đề OUTPUT Deleted.id
     const result = await pool.request()
       .input('id', sql.Int, parseInt(id))
       .query('DELETE FROM products OUTPUT Deleted.id WHERE id = @id');
 
-    // 2. Nếu không có dòng nào bị xóa (ID không tồn tại trong DB)
     if (result.recordset.length === 0) {
       return res.status(404).json({ message: 'Không tìm thấy sản phẩm này để xóa!' });
     }
 
-    // 3. Xóa thành công
     res.json({ message: 'Xóa sản phẩm thành công!', id: parseInt(id) });
   } catch (error) {
     res.status(500).json({ message: error.message });

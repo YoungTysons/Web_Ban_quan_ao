@@ -1,4 +1,3 @@
-// file: src/config/db.js
 const sql = require('mssql');
 
 const config = {
@@ -8,8 +7,8 @@ const config = {
   database: process.env.DB_DATABASE || 'shopquanao',
   port: parseInt(process.env.DB_PORT) || 1433,
   options: {
-    encrypt: false, // Đặt là false nếu chạy SQL Server cục bộ (local)
-    trustServerCertificate: true // Cho phép tin cậy chứng chỉ tự ký của local SQL Server
+    encrypt: false,
+    trustServerCertificate: true
   }
 };
 
@@ -28,7 +27,6 @@ const poolPromise = new sql.ConnectionPool(config)
   })
   .catch(err => {
     console.error('Kết nối SQL Server THẤT BẠI: ', err.message);
-    // Không crash server ngay lập tức để người dùng có thể sửa file .env và thử lại
     return null;
   });
 

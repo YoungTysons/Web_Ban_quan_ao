@@ -1,15 +1,10 @@
-// file: src/controllers/orderController.js
 const { sql, poolPromise } = require('../config/db');
 
-// @desc    Tạo đơn hàng mới (Thanh toán giỏ hàng)
-// @route   POST /api/orders
-// @access  Private (Cần đăng nhập)
 const createOrder = async (req, res) => {
   try {
     const { items, address, phone } = req.body;
-    const userId = req.user.id; // Lấy từ authMiddleware protect
+    const userId = req.user.id;
 
-    // Bước 1 & 2: Kiểm tra dữ liệu đầu vào
     if (!items || !Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ message: 'Giỏ hàng trống, vui lòng thêm sản phẩm!' });
     }
@@ -20,7 +15,6 @@ const createOrder = async (req, res) => {
     const pool = await poolPromise;
     if (!pool) return res.status(500).json({ message: 'Lỗi kết nối cơ sở dữ liệu!' });
 
-    // Bước 3: Kiểm tra tồn kho và tính tổng tiền
     let totalAmount = 0;
     const verifiedItems = [];
 
@@ -49,11 +43,9 @@ const createOrder = async (req, res) => {
       });
     }
 
-    // Cộng thêm phí ship 20,000đ
     const shippingFee = 20000;
     const grandTotal = totalAmount + shippingFee;
 
-    // Bước 4: Chèn đơn hàng mới vào bảng orders
     const orderResult = await pool.request()
       .input('user_id', sql.Int, userId)
       .input('total_amount', sql.Decimal(10, 2), grandTotal)
@@ -67,7 +59,6 @@ const createOrder = async (req, res) => {
 
     const newOrder = orderResult.recordset[0];
 
-    // Chèn chi tiết đơn hàng (order_items) và trừ kho hàng (products)
     for (const item of verifiedItems) {
       await pool.request()
         .input('order_id', sql.Int, newOrder.id)
@@ -86,7 +77,6 @@ const createOrder = async (req, res) => {
         .query('UPDATE products SET stock_quantity = stock_quantity - @qty WHERE id = @productId');
     }
 
-    // Bước 5: Trả về kết quả
     res.status(201).json({
       message: 'Đặt hàng thành công!',
       order: {
@@ -107,16 +97,12 @@ const createOrder = async (req, res) => {
   }
 };
 
-// @desc    Lấy danh sách lịch sử đơn hàng của người dùng hiện tại
-// @route   GET /api/orders/myorders
-// @access  Private (Cần đăng nhập)
 const getMyOrders = async (req, res) => {
   try {
     const userId = req.user.id;
     const pool = await poolPromise;
     if (!pool) return res.status(500).json({ message: 'Lỗi kết nối cơ sở dữ liệu!' });
 
-    // Bước 1 & 2: Lấy đơn hàng cá nhân, sắp xếp mới nhất lên đầu
     const result = await pool.request()
       .input('userId', sql.Int, userId)
       .query('SELECT * FROM orders WHERE user_id = @userId ORDER BY order_date DESC');
@@ -151,7 +137,6 @@ const getMyOrders = async (req, res) => {
       });
     }
 
-    // Bước 3: Trả về kết quả
     res.json(ordersList);
   } catch (error) {
     console.error('Lỗi tải đơn hàng cá nhân:', error.message);
@@ -159,15 +144,11 @@ const getMyOrders = async (req, res) => {
   }
 };
 
-// @desc    Lấy tất cả đơn hàng hệ thống (Chỉ dành cho Admin)
-// @route   GET /api/orders
-// @access  Private/Admin
 const getAllOrders = async (req, res) => {
   try {
     const pool = await poolPromise;
     if (!pool) return res.status(500).json({ message: 'Lỗi kết nối cơ sở dữ liệu!' });
 
-    // Bước 1 & 2: Lấy toàn bộ đơn hàng kèm thông tin người đặt, sắp xếp mới nhất lên đầu
     const result = await pool.request()
       .query(`
         SELECT o.*, u.name as user_name 
@@ -207,7 +188,6 @@ const getAllOrders = async (req, res) => {
       });
     }
 
-    // Bước 3: Trả về kết quả
     res.json(ordersList);
   } catch (error) {
     console.error('Lỗi tải danh sách đơn hàng:', error.message);
@@ -215,15 +195,11 @@ const getAllOrders = async (req, res) => {
   }
 };
 
-// @desc    Cập nhật trạng thái đơn hàng (Chỉ dành cho Admin)
-// @route   PUT /api/orders/:id/status
-// @access  Private/Admin
 const updateOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
 
-    // Bước 2: Kiểm tra trạng thái hợp lệ
     const validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ message: 'Trạng thái đơn hàng không hợp lệ!' });
@@ -232,7 +208,6 @@ const updateOrderStatus = async (req, res) => {
     const pool = await poolPromise;
     if (!pool) return res.status(500).json({ message: 'Lỗi kết nối cơ sở dữ liệu!' });
 
-    // Bước 3 & 4: Tìm đơn hàng và cập nhật status
     const result = await pool.request()
       .input('id', sql.Int, parseInt(id))
       .input('status', sql.NVarChar, status)
@@ -240,7 +215,6 @@ const updateOrderStatus = async (req, res) => {
 
     const updatedOrder = result.recordset[0];
     if (!updatedOrder) {
-      // Bước 5: Nếu không thấy, trả về lỗi 404
       return res.status(404).json({ message: 'Không tìm thấy đơn hàng cần cập nhật!' });
     }
 

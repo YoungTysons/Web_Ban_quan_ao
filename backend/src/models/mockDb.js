@@ -1,10 +1,3 @@
-// file: src/models/mockDb.js
-// CƠ SỞ DỮ LIỆU BỘ NHỚ ĐỆM (IN-MEMORY MOCK DATABASE)
-// File này giả lập các bảng trong database (Users, Products, Orders) 
-// để giúp các API hoạt động thật sự (thêm, sửa, xóa, tìm kiếm) 
-// mà không cần phải kết nối SQL Server/MySQL ngay lập tức.
-
-// 1. Dữ liệu Danh mục mẫu (Categories)
 const categories = [
   { id: 1, name: 'Áo Thun', description: 'Các mẫu áo thun cotton 100% thoáng mát, form rộng unisex' },
   { id: 2, name: 'Quần Jean', description: 'Quần jean nam nữ ống suông, skinny, rách gối cá tính' },
@@ -12,15 +5,11 @@ const categories = [
   { id: 4, name: 'Sơ Mi', description: 'Sơ mi tay dài, tay ngắn phong cách lịch lãm, công sở hoặc Hàn Quốc' }
 ];
 
-// 2. Dữ liệu Người dùng mẫu (Users)
-// Mật khẩu đã được băm mẫu bằng bcrypt ứng với '123456' và 'admin123'
-// Bạn có thể đăng ký tài khoản mới qua API, nó sẽ tự động được thêm vào đây.
 const users = [
   {
     id: 1,
     name: 'Nguyễn Văn Khách',
     email: 'customer@gmail.com',
-    // Mật khẩu: 123456 (đã băm bằng bcryptjs)
     password: '$2a$10$wN194x/5k1kX5Z6f16C/yeD9K20u63g6V3UfNn/7t42FzXNlK6lPq', 
     role: 'customer',
     phone: '0912345678',
@@ -31,7 +20,6 @@ const users = [
     id: 2,
     name: 'Trần Admin Đẹp Trai',
     email: 'admin@gmail.com',
-    // Mật khẩu: admin123 (đã băm bằng bcryptjs)
     password: '$2a$10$K9p7.LhQ3K7h0D/Z5KjOtefFkC6x/kM95W231Q.xJj6.B7l.vJ1Y2', 
     role: 'admin',
     phone: '0987654321',
@@ -40,7 +28,6 @@ const users = [
   }
 ];
 
-// 3. Dữ liệu Sản phẩm mẫu (Products)
 const products = [
   {
     id: 1,
@@ -94,13 +81,12 @@ const products = [
   }
 ];
 
-// 4. Danh sách Đơn hàng mẫu (Orders)
 const orders = [
   {
     id: 1,
     userId: 1,
     orderDate: new Date(),
-    status: 'pending', // pending, processing, shipped, delivered, cancelled
+    status: 'pending',
     totalAmount: 520000,
     address: '123 Đường Ba Đình, Quận 1, TP. HCM',
     phone: '0912345678',
